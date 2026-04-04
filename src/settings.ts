@@ -250,7 +250,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 			.setDesc("单次补全的最大字符数")
 			.addSlider((slider) =>
 				slider
-					.setLimits(50, 500, 50)
+					.setLimits(10, 300, 10)
 					.setValue(this.plugin.settings.maxCompletionLength)
 					.setDynamicTooltip()
 					.onChange(async (value) => {

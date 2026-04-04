@@ -184,7 +184,6 @@ ${instruction}`;
 
 		// 如果补全以当前行结尾开头，去除重复部分
 		if (currentLine.endsWith(result.substring(0, Math.min(result.length, 5)))) {
-			// 简单去重逻辑，可能需要更复杂的处理
 			for (let i = 1; i <= Math.min(result.length, currentLine.length); i++) {
 				if (currentLine.endsWith(result.substring(0, i))) {
 					result = result.substring(i);
@@ -192,11 +191,64 @@ ${instruction}`;
 			}
 		}
 
-		// 限制长度
-		if (result.length > this.settings.maxCompletionLength) {
-			result = result.substring(0, this.settings.maxCompletionLength);
+		// 单行模式：在第一个换行符处截断
+		if (this.settings.completionMode === "single-line") {
+			const newlineIndex = result.indexOf("\n");
+			if (newlineIndex >= 0) {
+				result = result.substring(0, newlineIndex);
+			}
+		}
+
+		// 语义截断：超过最大长度时，优先在完整语义单元后截断
+		const limit = this.settings.maxCompletionLength;
+		if (result.length > limit) {
+			result = this.smartTruncate(result, limit);
 		}
 
 		return result;
+	}
+
+	private smartTruncate(text: string, limit: number): string {
+		const candidate = text.substring(0, limit);
+
+		// 1. 优先截断到代码块结束（```）之前
+		const codeBlockIndex = candidate.lastIndexOf("```");
+		if (codeBlockIndex > limit * 0.5) {
+			return candidate.substring(0, codeBlockIndex);
+		}
+
+		// 2. 优先截断到段落边界（双换行）
+		const paraBreakIndex = candidate.lastIndexOf("\n\n");
+		if (paraBreakIndex > limit * 0.6) {
+			return candidate.substring(0, paraBreakIndex);
+		}
+
+		// 3. 优先截断到句子结束标点
+		const sentenceMatch = candidate.match(/[。！？.!?][\s]*/g);
+		if (sentenceMatch) {
+			let lastIdx = -1;
+			let pos = 0;
+			for (const m of sentenceMatch) {
+				const idx = candidate.indexOf(m, pos);
+				if (idx >= 0) {
+					lastIdx = idx + m.length;
+					pos = lastIdx;
+				}
+			}
+			if (lastIdx > limit * 0.6) {
+				return candidate.substring(0, lastIdx);
+			}
+		}
+
+		// 4. 优先截断到空格/换行
+		const spaceIndex = candidate.lastIndexOf(" ");
+		const newlineIndex = candidate.lastIndexOf("\n");
+		const breakIndex = Math.max(spaceIndex, newlineIndex);
+		if (breakIndex > limit * 0.7) {
+			return candidate.substring(0, breakIndex);
+		}
+
+		// 5. 硬截断
+		return candidate;
 	}
 }
