@@ -2,11 +2,14 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFile } from "obsidia
 import { Compartment } from "@codemirror/state";
 import { CopilotSettingTab, DEFAULT_SETTINGS, CopilotSettings } from "./settings";
 import { CompletionEngine } from "./completion";
+import { SummaryEngine } from "./summary";
+import { SummaryModal } from "./ui/summary-modal";
 import { SuggestWidget } from "./ui/suggest";
 
 export default class CopilotPlugin extends Plugin {
 	settings: CopilotSettings;
 	completionEngine: CompletionEngine;
+	summaryEngine: SummaryEngine;
 	suggestWidget: SuggestWidget | null = null;
 	private debounceTimer: number | null = null;
 	copilotCompartment = new Compartment();
@@ -14,6 +17,7 @@ export default class CopilotPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.completionEngine = new CompletionEngine(this.settings);
+		this.summaryEngine = new SummaryEngine(this.settings);
 
 		// 注册 CodeMirror compartment 用于幽灵文本
 		this.registerEditorExtension(this.copilotCompartment.of([]));
@@ -125,6 +129,33 @@ export default class CopilotPlugin extends Plugin {
 				return false;
 			},
 		});
+
+		// 注册生成笔记摘要的命令
+		this.addCommand({
+			id: "generate-summary",
+			name: "生成笔记摘要",
+			callback: async () => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file || file.extension !== "md") {
+					new Notice("请先打开一个 Markdown 笔记");
+					return;
+				}
+
+				const content = await this.app.vault.adapter.read(file.path);
+				if (!content.trim()) {
+					new Notice("当前笔记内容为空，无需摘要");
+					return;
+				}
+
+				try {
+					const result = await this.summaryEngine.generateSummary(content);
+					new SummaryModal(this.app, result, file).open();
+				} catch (error: any) {
+					console.error("[Copilot] Summary error:", error);
+					new Notice(`摘要生成失败: ${error?.message || "未知错误"}`);
+				}
+			},
+		});
 	}
 
 	onunload() {
@@ -145,6 +176,9 @@ export default class CopilotPlugin extends Plugin {
 		await this.saveData(this.settings);
 		if (this.completionEngine) {
 			this.completionEngine.updateSettings(this.settings);
+		}
+		if (this.summaryEngine) {
+			this.summaryEngine.updateSettings(this.settings);
 		}
 	}
 
