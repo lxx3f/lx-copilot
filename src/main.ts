@@ -12,12 +12,8 @@ export default class CopilotPlugin extends Plugin {
 	copilotCompartment = new Compartment();
 
 	async onload() {
-		console.log("[Copilot] Plugin loading...");
 		await this.loadSettings();
-		console.log("[Copilot] Settings loaded:", this.settings);
-
 		this.completionEngine = new CompletionEngine(this.settings);
-		console.log("[Copilot] Completion engine initialized");
 
 		// 注册 CodeMirror compartment 用于幽灵文本
 		this.registerEditorExtension(this.copilotCompartment.of([]));
@@ -28,7 +24,6 @@ export default class CopilotPlugin extends Plugin {
 		// 监听编辑器变化
 		this.registerEvent(
 			this.app.workspace.on("editor-change", (editor: Editor) => {
-				console.log("[Copilot] Editor changed");
 				this.handleEditorChange(editor);
 			})
 		);
@@ -88,8 +83,6 @@ export default class CopilotPlugin extends Plugin {
 				return false;
 			},
 		});
-
-		console.log("Obsidian Copilot plugin loaded");
 	}
 
 	onunload() {
@@ -100,7 +93,6 @@ export default class CopilotPlugin extends Plugin {
 			this.suggestWidget.destroy();
 			this.suggestWidget = null;
 		}
-		console.log("Obsidian Copilot plugin unloaded");
 	}
 
 	async loadSettings() {
@@ -115,9 +107,7 @@ export default class CopilotPlugin extends Plugin {
 	}
 
 	private handleEditorChange(editor: Editor) {
-		console.log("[Copilot] handleEditorChange called, enabled:", this.settings.enabled);
 		if (!this.settings.enabled) {
-			console.log("[Copilot] Plugin disabled, skipping");
 			return;
 		}
 
@@ -129,11 +119,9 @@ export default class CopilotPlugin extends Plugin {
 		const cursor = editor.getCursor();
 		const line = editor.getLine(cursor.line);
 		const beforeCursor = line.substring(0, cursor.ch);
-		console.log("[Copilot] Before cursor:", beforeCursor);
 
 		// 检查是否应该触发补全
 		const shouldTrigger = this.shouldTriggerCompletion(editor, cursor, beforeCursor);
-		console.log("[Copilot] Should trigger:", shouldTrigger);
 		if (!shouldTrigger) {
 			if (this.suggestWidget) {
 				this.suggestWidget.hide();
@@ -141,7 +129,6 @@ export default class CopilotPlugin extends Plugin {
 			return;
 		}
 
-		console.log("[Copilot] Setting up completion timer, delay:", this.settings.debounceDelay);
 		// 防抖处理
 		this.debounceTimer = window.setTimeout(async () => {
 			await this.requestCompletion(editor, cursor, beforeCursor);
@@ -177,7 +164,6 @@ export default class CopilotPlugin extends Plugin {
 		// 多行模式：即使当前行输入很短，只要上下文有足够内容也触发
 		if (this.settings.completionMode === "multi-line") {
 			const context = this.buildContext(editor, cursor);
-			// 上下文包含当前行，所以只要上下文有效长度超过阈值即可
 			if (context.trim().length >= this.settings.minTriggerLength * 2) {
 				return true;
 			}
@@ -191,21 +177,15 @@ export default class CopilotPlugin extends Plugin {
 		cursor: { line: number; ch: number },
 		beforeCursor: string
 	) {
-		console.log("[Copilot] Requesting completion...");
 		try {
 			const context = this.buildContext(editor, cursor);
-			console.log("[Copilot] Context length:", context.length);
 			const completions = await this.completionEngine.getCompletions(
 				context,
 				beforeCursor
 			);
-			console.log("[Copilot] Got completions:", completions.length);
 
 			if (completions.length > 0) {
-				console.log("[Copilot] Showing suggestions");
 				this.showSuggestion(editor, cursor, completions);
-			} else {
-				console.log("[Copilot] Empty completions, not showing");
 			}
 		} catch (error) {
 			console.error("[Copilot] Completion error:", error);
@@ -216,13 +196,10 @@ export default class CopilotPlugin extends Plugin {
 		editor: Editor,
 		cursor: { line: number; ch: number }
 	): string {
-		// 获取前后文内容
 		const lines = editor.getValue().split("\n");
 		const contextLines = this.settings.completionMode === "multi-line" ? 30 : 10;
-
 		const startLine = Math.max(0, cursor.line - contextLines);
 		const endLine = Math.min(lines.length, cursor.line + contextLines);
-
 		return lines.slice(startLine, endLine).join("\n");
 	}
 
@@ -236,7 +213,6 @@ export default class CopilotPlugin extends Plugin {
 		}
 
 		this.suggestWidget.show(candidates, (suggestion: string) => {
-			// 接受建议后的回调
 			const currentCursor = editor.getCursor();
 			editor.replaceRange(suggestion, currentCursor);
 

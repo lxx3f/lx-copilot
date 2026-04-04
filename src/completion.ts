@@ -17,12 +17,10 @@ export class CompletionEngine {
 	private settings: CopilotSettings;
 
 	constructor(settings: CopilotSettings) {
-		console.log("[Copilot] CompletionEngine constructor, provider:", settings.apiProvider);
 		this.settings = settings;
 	}
 
 	updateSettings(settings: CopilotSettings) {
-		console.log("[Copilot] Updating settings, provider:", settings.apiProvider);
 		this.settings = settings;
 	}
 
@@ -48,14 +46,12 @@ export class CompletionEngine {
 	}
 
 	async getCompletions(context: string, currentLine: string): Promise<string[]> {
-		console.log("[Copilot] getCompletions called");
 		try {
 			const results = await this.requestCompletions(context, currentLine, this.settings.completionCount);
 			return results;
 		} catch (error: any) {
 			// 如果请求多个候选失败，尝试降级到 1 个
 			if (this.settings.completionCount > 1) {
-				console.warn("[Copilot] Multi-choice request failed, falling back to n=1");
 				try {
 					const results = await this.requestCompletions(context, currentLine, 1);
 					return results;
@@ -88,7 +84,6 @@ export class CompletionEngine {
 		}
 
 		const prompt = this.buildPrompt(context, currentLine);
-		console.log("[Copilot] Sending request to API, model:", this.settings.modelName, "n:", count);
 
 		const response = await requestUrl({
 			url: `${endpoint}/chat/completions`,
@@ -116,8 +111,6 @@ export class CompletionEngine {
 			}),
 		});
 
-		console.log("[Copilot] Response status:", response.status);
-
 		if (response.status !== 200) {
 			console.error("[Copilot] API error:", response.text);
 			// 某些 API 会返回 400 说明不支持 n>1，抛出让上层降级
@@ -126,7 +119,6 @@ export class CompletionEngine {
 
 		const data = response.json as ChatCompletionResponse;
 		const choices = data.choices || [];
-		console.log("[Copilot] API response received, choices:", choices.length);
 
 		const results: string[] = [];
 		for (const choice of choices) {
