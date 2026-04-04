@@ -9,6 +9,7 @@ export default class CopilotPlugin extends Plugin {
 	completionEngine: CompletionEngine;
 	suggestWidget: SuggestWidget | null = null;
 	private debounceTimer: number | null = null;
+	private ignoreNextSelectionChange: boolean = false;
 	copilotCompartment = new Compartment();
 
 	async onload() {
@@ -30,6 +31,10 @@ export default class CopilotPlugin extends Plugin {
 
 		// 光标/选择变化时隐藏建议（鼠标点击、方向键移动光标等）
 		this.registerDomEvent(document, "selectionchange", () => {
+			if (this.ignoreNextSelectionChange) {
+				this.ignoreNextSelectionChange = false;
+				return;
+			}
 			if (this.suggestWidget && this.suggestWidget.isVisible()) {
 				this.suggestWidget.hide();
 			}
@@ -53,6 +58,7 @@ export default class CopilotPlugin extends Plugin {
 
 			if (evt.key === "Tab") {
 				evt.preventDefault();
+				this.ignoreNextSelectionChange = true;
 				this.suggestWidget.accept();
 				return;
 			}
