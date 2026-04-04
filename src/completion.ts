@@ -147,9 +147,10 @@ export class CompletionEngine {
 2. 在代码块中（\`\`\`），补全代码逻辑
 3. 在数学公式中（$ 或 $$），补全 LaTeX 表达式
 4. 保持简洁，一次只补全一个概念或语句
-5. 使用 Markdown 语法
-6. 优先补全代码、公式和技术术语
-7. 不要重复已输入的内容
+5. 优先补全代码、公式和技术术语
+6. 不要重复已输入的内容
+7. 绝对禁止输出代码块包裹标记：如果上下文已经在代码块内部，不要输出 \`\`\`、\`\`\`python 或任何代码块起始/结束标记，只输出纯代码内容
+8. 绝对禁止输出公式包裹标记：如果上下文已经在数学公式内部，不要输出 $ 或 $$ 包裹标记，只输出纯 LaTeX 表达式
 
 示例：
 - 输入：\`const fib = (n) =>\` → 补全：\` => { if (n <= 1) return n; return fib(n-1) + fib(n-2); }\`
@@ -165,15 +166,12 @@ export class CompletionEngine {
 			? "请根据上下文补全后续内容（可以包含多行，只返回补全内容，不要重复已输入的部分）："
 			: "请补全当前行的剩余部分（只返回补全内容，不要重复已输入的部分）：";
 
-		return `上下文：
-\`\`\`
+		return `[上下文开始]
 ${context}
-\`\`\`
+[上下文结束]
 
 当前行（光标在末尾）：
-\`\`\`
 ${currentLine}
-\`\`\`
 
 ${instruction}`;
 	}
@@ -181,6 +179,33 @@ ${instruction}`;
 	private postProcessCompletion(completion: string, currentLine: string): string {
 		// 去除可能的重复
 		let result = completion.trim();
+
+		// 去除 AI 可能错误输出的代码块包裹标记
+		if (result.startsWith("```")) {
+			const firstNewline = result.indexOf("\n");
+			if (firstNewline >= 0) {
+				result = result.substring(firstNewline + 1);
+			} else {
+				result = result.substring(3);
+			}
+			// 如果末尾还有 ```，也去掉
+			if (result.endsWith("```")) {
+				result = result.substring(0, result.length - 3).trim();
+			}
+		}
+
+		// 去除 AI 可能错误输出的公式包裹标记
+		if (result.startsWith("$$")) {
+			result = result.substring(2);
+			if (result.endsWith("$$")) {
+				result = result.substring(0, result.length - 2).trim();
+			}
+		} else if (result.startsWith("$")) {
+			result = result.substring(1);
+			if (result.endsWith("$")) {
+				result = result.substring(0, result.length - 1).trim();
+			}
+		}
 
 		// 如果补全以当前行结尾开头，去除重复部分
 		if (currentLine.endsWith(result.substring(0, Math.min(result.length, 5)))) {
