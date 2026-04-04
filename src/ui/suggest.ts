@@ -1,5 +1,5 @@
 import { Editor } from "obsidian";
-import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
+import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType, keymap } from "@codemirror/view";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 
@@ -133,7 +133,16 @@ export class SuggestWidget {
 	private render(view: EditorView) {
 		const suggestion = this.candidates[this.currentIndex];
 		const plugin = createGhostTextPlugin(suggestion, this.anchorPos);
-		view.dispatch({ effects: this.compartment.reconfigure(plugin) });
+		const tabKeymap = keymap.of([
+			{
+				key: "Tab",
+				run: () => {
+					this.accept();
+					return true;
+				},
+			},
+		]);
+		view.dispatch({ effects: this.compartment.reconfigure([plugin, tabKeymap]) });
 		this.showHint(view);
 	}
 

@@ -55,17 +55,6 @@ export default class CopilotPlugin extends Plugin {
 				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (!activeView || activeView.getMode() !== "source") return;
 
-				if (evt.key === "Tab") {
-					evt.preventDefault();
-					this.isAcceptingSuggestion = true;
-					this.suggestWidget.accept();
-					// 延迟清除标志，避免 editor-change 同步触发 handleEditorChange 把建议隐藏
-					window.setTimeout(() => {
-						this.isAcceptingSuggestion = false;
-					}, 0);
-					return;
-				}
-
 				const NAVIGATION_KEYS = [
 					"ArrowUp",
 					"ArrowDown",
