@@ -14,6 +14,7 @@ main.js
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
@@ -28,3 +29,7 @@ coverage/
 # 环境变量
 .env
 .env.local
+
+# 部署脚本
+scripts/
+
