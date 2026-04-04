@@ -9,6 +9,7 @@ export default class CopilotPlugin extends Plugin {
 	completionEngine: CompletionEngine;
 	suggestWidget: SuggestWidget | null = null;
 	private debounceTimer: number | null = null;
+	private isAcceptingSuggestion: boolean = false;
 	copilotCompartment = new Compartment();
 
 	async onload() {
@@ -53,7 +54,12 @@ export default class CopilotPlugin extends Plugin {
 
 			if (evt.key === "Tab") {
 				evt.preventDefault();
+				this.isAcceptingSuggestion = true;
 				this.suggestWidget.accept();
+				// 延迟清除标志，避免 editor-change 同步触发 handleEditorChange 把建议隐藏
+				window.setTimeout(() => {
+					this.isAcceptingSuggestion = false;
+				}, 0);
 				return;
 			}
 
@@ -142,6 +148,11 @@ export default class CopilotPlugin extends Plugin {
 
 	private handleEditorChange(editor: Editor) {
 		if (!this.settings.enabled) {
+			return;
+		}
+
+		// 接受建议期间触发的 editor-change 不处理
+		if (this.isAcceptingSuggestion) {
 			return;
 		}
 
