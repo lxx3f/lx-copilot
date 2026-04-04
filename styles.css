@@ -1,0 +1,58 @@
+/* Obsidian Copilot 插件样式 */
+
+.copilot-suggestion {
+	background-color: var(--background-primary-alt);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 8px 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-small);
+	max-width: 400px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	animation: copilot-fade-in 0.15s ease-out;
+}
+
+.copilot-suggestion-text {
+	color: var(--text-muted);
+	white-space: pre;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.copilot-suggestion-hint {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+	padding: 2px 6px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+}
+
+@keyframes copilot-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* 幽灵文本样式（替代方案） */
+.cm-line .copilot-ghost-text {
+	color: var(--text-faint);
+	pointer-events: none;
+}
+
+/* 设置面板样式 */
+.setting-item[data-id="apiKey"] input {
+	-webkit-text-security: disc;
+}
+
+.setting-item[data-id="apiKey"] input:focus {
+	-webkit-text-security: none;
+}
