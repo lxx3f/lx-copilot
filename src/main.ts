@@ -28,11 +28,22 @@ export default class CopilotPlugin extends Plugin {
 			})
 		);
 
-		// 注册接受建议的命令
+		// Tab 接受建议：通过 keydown 精确拦截，只在建议可见时生效
+		this.registerDomEvent(document, "keydown", (evt: KeyboardEvent) => {
+			if (evt.key !== "Tab") return;
+			if (!this.suggestWidget || !this.suggestWidget.isVisible()) return;
+			// 只在编辑器处于编辑模式时拦截
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!activeView || activeView.getMode() !== "source") return;
+
+			evt.preventDefault();
+			this.suggestWidget.accept();
+		});
+
+		// 注册接受建议的命令（供用户自定义热键，默认不绑定 Tab）
 		this.addCommand({
 			id: "accept-completion",
 			name: "接受补全建议",
-			hotkeys: [{ modifiers: [], key: "Tab" }],
 			editorCallback: (editor: Editor) => {
 				if (this.suggestWidget && this.suggestWidget.isVisible()) {
 					this.suggestWidget.accept();
