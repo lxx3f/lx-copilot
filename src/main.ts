@@ -45,29 +45,43 @@ export default class CopilotPlugin extends Plugin {
 			})
 		);
 
-		// keydown 精确拦截：Tab 接受建议，导航键隐藏建议
-		this.registerDomEvent(document, "keydown", (evt: KeyboardEvent) => {
-			if (!this.suggestWidget || !this.suggestWidget.isVisible()) return;
+		// keydown 精确拦截（捕获阶段，确保在 CodeMirror 之前处理）
+		this.registerDomEvent(
+			document,
+			"keydown",
+			(evt: KeyboardEvent) => {
+				if (!this.suggestWidget || !this.suggestWidget.isVisible()) return;
 
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (!activeView || activeView.getMode() !== "source") return;
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!activeView || activeView.getMode() !== "source") return;
 
-			if (evt.key === "Tab") {
-				evt.preventDefault();
-				this.isAcceptingSuggestion = true;
-				this.suggestWidget.accept();
-				// 延迟清除标志，避免 editor-change 同步触发 handleEditorChange 把建议隐藏
-				window.setTimeout(() => {
-					this.isAcceptingSuggestion = false;
-				}, 0);
-				return;
-			}
+				if (evt.key === "Tab") {
+					evt.preventDefault();
+					this.isAcceptingSuggestion = true;
+					this.suggestWidget.accept();
+					// 延迟清除标志，避免 editor-change 同步触发 handleEditorChange 把建议隐藏
+					window.setTimeout(() => {
+						this.isAcceptingSuggestion = false;
+					}, 0);
+					return;
+				}
 
-			const NAVIGATION_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"];
-			if (NAVIGATION_KEYS.includes(evt.key)) {
-				this.suggestWidget.hide();
-			}
-		});
+				const NAVIGATION_KEYS = [
+					"ArrowUp",
+					"ArrowDown",
+					"ArrowLeft",
+					"ArrowRight",
+					"Home",
+					"End",
+					"PageUp",
+					"PageDown",
+				];
+				if (NAVIGATION_KEYS.includes(evt.key)) {
+					this.suggestWidget.hide();
+				}
+			},
+			true
+		);
 
 		// 注册接受建议的命令（供用户自定义热键，默认不绑定 Tab）
 		this.addCommand({
