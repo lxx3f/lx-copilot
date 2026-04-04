@@ -80,7 +80,7 @@ ln -s <project-path> <vault>/.obsidian/plugins/obsidian-copilot
 
 1. 在编辑器中正常输入
 2. 当 AI 建议出现时，你会看到一个提示框
-3. 按 `Tab` 接受建议
+3. 按 `Alt+Enter` 接受建议
 4. 按 `Esc` 拒绝建议
 
 ## 开发
