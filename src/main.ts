@@ -28,16 +28,32 @@ export default class CopilotPlugin extends Plugin {
 			})
 		);
 
-		// Tab 接受建议：通过 keydown 精确拦截，只在建议可见时生效
+		// 切换标签页时隐藏建议
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () => {
+				if (this.suggestWidget) {
+					this.suggestWidget.hide();
+				}
+			})
+		);
+
+		// keydown 精确拦截：Tab 接受建议，导航键隐藏建议
 		this.registerDomEvent(document, "keydown", (evt: KeyboardEvent) => {
-			if (evt.key !== "Tab") return;
 			if (!this.suggestWidget || !this.suggestWidget.isVisible()) return;
-			// 只在编辑器处于编辑模式时拦截
+
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!activeView || activeView.getMode() !== "source") return;
 
-			evt.preventDefault();
-			this.suggestWidget.accept();
+			if (evt.key === "Tab") {
+				evt.preventDefault();
+				this.suggestWidget.accept();
+				return;
+			}
+
+			const NAVIGATION_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"];
+			if (NAVIGATION_KEYS.includes(evt.key)) {
+				this.suggestWidget.hide();
+			}
 		});
 
 		// 注册接受建议的命令（供用户自定义热键，默认不绑定 Tab）
@@ -120,6 +136,11 @@ export default class CopilotPlugin extends Plugin {
 	private handleEditorChange(editor: Editor) {
 		if (!this.settings.enabled) {
 			return;
+		}
+
+		// 用户继续输入时，如果有可见建议先隐藏
+		if (this.suggestWidget && this.suggestWidget.isVisible()) {
+			this.suggestWidget.hide();
 		}
 
 		// 清除之前的定时器
