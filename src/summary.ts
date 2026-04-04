@@ -47,7 +47,7 @@ export class SummaryEngine {
 			throw new Error("No API endpoint");
 		}
 		if (!this.getConfig().apiKey && this.settings.apiProvider !== "ollama") {
-			new Notice("请配置 API Key");
+			new Notice("请配置 API key");
 			throw new Error("No API key");
 		}
 
@@ -104,10 +104,10 @@ export class SummaryEngine {
 			return {
 				summary: String(parsed.summary || "").trim(),
 				suggestions: Array.isArray(parsed.suggestions)
-					? parsed.suggestions.map((s: any) => String(s).trim()).filter(Boolean)
+					? parsed.suggestions.map((s: unknown) => String(s).trim()).filter(Boolean)
 					: [],
 			};
-		} catch (e) {
+		} catch {
 			console.error("[Copilot] Failed to parse summary JSON:", raw);
 			new Notice("AI 返回格式异常，无法解析摘要");
 			throw new Error("Parse error");

@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
 import { Compartment } from "@codemirror/state";
-import { CopilotSettingTab, DEFAULT_SETTINGS, migrateSettings, CopilotSettings } from "./settings";
+import { CopilotSettingTab, migrateSettings, CopilotSettings } from "./settings";
 import { CompletionEngine } from "./completion";
 import { SummaryEngine } from "./summary";
 import { SummaryModal } from "./ui/summary-modal";
@@ -92,7 +92,6 @@ export default class CopilotPlugin extends Plugin {
 		this.addCommand({
 			id: "next-completion",
 			name: "下一个补全建议",
-			hotkeys: [{ modifiers: ["Alt"], key: "]" }],
 			editorCallback: (editor: Editor) => {
 				if (this.suggestWidget && this.suggestWidget.isVisible()) {
 					this.suggestWidget.next();
@@ -106,7 +105,6 @@ export default class CopilotPlugin extends Plugin {
 		this.addCommand({
 			id: "prev-completion",
 			name: "上一个补全建议",
-			hotkeys: [{ modifiers: ["Alt"], key: "[" }],
 			editorCallback: (editor: Editor) => {
 				if (this.suggestWidget && this.suggestWidget.isVisible()) {
 					this.suggestWidget.prev();
@@ -120,7 +118,6 @@ export default class CopilotPlugin extends Plugin {
 		this.addCommand({
 			id: "reject-completion",
 			name: "拒绝补全建议",
-			hotkeys: [{ modifiers: [], key: "Escape" }],
 			editorCallback: (editor: Editor) => {
 				if (this.suggestWidget && this.suggestWidget.isVisible()) {
 					this.suggestWidget.hide();
@@ -150,9 +147,10 @@ export default class CopilotPlugin extends Plugin {
 				try {
 					const result = await this.summaryEngine.generateSummary(content);
 					new SummaryModal(this.app, result, file).open();
-				} catch (error: any) {
+				} catch (error) {
 					console.error("[Copilot] Summary error:", error);
-					new Notice(`摘要生成失败: ${error?.message || "未知错误"}`);
+					const msg = error instanceof Error ? error.message : "未知错误";
+						new Notice(`摘要生成失败: ${msg}`);
 				}
 			},
 		});

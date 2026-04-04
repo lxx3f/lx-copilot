@@ -48,20 +48,22 @@ export class CompletionEngine {
 		try {
 			const results = await this.requestCompletions(context, currentLine, this.settings.completionCount);
 			return results;
-		} catch (error: any) {
+		} catch (error) {
 			// 如果请求多个候选失败，尝试降级到 1 个
 			if (this.settings.completionCount > 1) {
 				try {
 					const results = await this.requestCompletions(context, currentLine, 1);
 					return results;
-				} catch (fallbackError: any) {
-					console.error("[Copilot] Fallback request failed:", fallbackError?.message || fallbackError);
-					new Notice(`API 请求失败: ${fallbackError?.message || "未知错误"}`);
+				} catch (fallbackError) {
+					const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : "未知错误";
+					console.error("[Copilot] Fallback request failed:", fallbackMsg);
+					new Notice(`API 请求失败: ${fallbackMsg}`);
 					throw fallbackError;
 				}
 			}
-			console.error("[Copilot] Completion API error:", error?.message || error);
-			new Notice(`API 请求失败: ${error?.message || "未知错误"}`);
+			const msg = error instanceof Error ? error.message : "未知错误";
+			console.error("[Copilot] Completion API error:", msg);
+			new Notice(`API 请求失败: ${msg}`);
 			throw error;
 		}
 	}
@@ -78,7 +80,7 @@ export class CompletionEngine {
 
 		if (!this.getConfig().apiKey && this.settings.apiProvider !== "ollama") {
 			console.error("[Copilot] No API key configured");
-			new Notice("请配置 API Key");
+			new Notice("请配置 API key");
 			return [];
 		}
 

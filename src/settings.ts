@@ -131,7 +131,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Obsidian Copilot 设置" });
+		new Setting(containerEl).setName("Obsidian Copilot 设置").setHeading();
 
 		// 启用/禁用插件
 		new Setting(containerEl)
@@ -140,9 +140,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enabled)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.enabled = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -162,7 +162,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.addOption("deepseek", "DeepSeek")
 					.addOption("custom", "自定义 API")
 					.setValue(currentProvider)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const newProvider = value as ApiProvider;
 						this.plugin.settings.apiProvider = newProvider;
 
@@ -178,24 +178,24 @@ export class CopilotSettingTab extends PluginSettingTab {
 							}
 						}
 
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 						this.display(); // 重新渲染以显示/隐藏相关设置
 					})
 			);
 
-		// API Key（仅非本地模型需要）
+		// API key（仅非本地模型需要）
 		const noKeyProviders: ApiProvider[] = ["ollama"];
 		if (!noKeyProviders.includes(currentProvider)) {
 			new Setting(containerEl)
-				.setName("API Key")
+				.setName("API key")
 				.setDesc("你的 API 密钥（不会离开本设备）")
 				.addText((text) =>
 					text
 						.setPlaceholder("sk-...")
 						.setValue(config.apiKey)
-						.onChange(async (value) => {
+						.onChange((value) => {
 							config.apiKey = value;
-							await this.plugin.saveSettings();
+							this.plugin.saveSettings();
 						})
 				);
 		}
@@ -229,9 +229,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder(defaultEndpoint)
 					.setValue(config.apiEndpoint)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						config.apiEndpoint = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -258,13 +258,13 @@ export class CopilotSettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder(modelPlaceholders[currentProvider])
 					.setValue(config.modelName)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						config.modelName = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
-		containerEl.createEl("h3", { text: "补全行为" });
+		new Setting(containerEl).setName("补全行为").setHeading();
 
 		// 补全模式
 		new Setting(containerEl)
@@ -275,9 +275,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.addOption("single-line", "单行补全")
 					.addOption("multi-line", "多行补全")
 					.setValue(this.plugin.settings.completionMode)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.completionMode = value as CompletionMode;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -290,9 +290,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setLimits(100, 2000, 100)
 					.setValue(this.plugin.settings.debounceDelay)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.debounceDelay = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -305,9 +305,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setLimits(1, 20, 1)
 					.setValue(this.plugin.settings.minTriggerLength)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.minTriggerLength = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -320,9 +320,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setLimits(10, 300, 10)
 					.setValue(this.plugin.settings.maxCompletionLength)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.maxCompletionLength = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -335,9 +335,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setLimits(1, 5, 1)
 					.setValue(this.plugin.settings.completionCount)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.completionCount = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 
@@ -350,9 +350,9 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setLimits(0, 2, 0.1)
 					.setValue(this.plugin.settings.temperature)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.settings.temperature = value;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettings();
 					})
 			);
 	}
