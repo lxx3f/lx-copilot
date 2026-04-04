@@ -1,6 +1,5 @@
 import { Editor } from "obsidian";
-import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType, keymap } from "@codemirror/view";
-import { EditorView } from "@codemirror/view";
+import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType, keymap, EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 
 interface CopilotEditor {
@@ -176,10 +175,8 @@ export class SuggestWidget {
 		const rect = hint.getBoundingClientRect();
 		const top = coords.top - rect.height - 4;
 		const left = coords.left;
-		hint.style.position = "fixed";
 		hint.style.top = `${top}px`;
 		hint.style.left = `${left}px`;
-		hint.style.zIndex = "9999";
 
 		this.hintEl = hint;
 	}

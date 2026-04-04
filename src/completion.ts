@@ -8,9 +8,6 @@ interface ChatCompletionResponse {
 			content: string;
 		};
 	}>;
-	error?: {
-		message: string;
-	};
 }
 
 export class CompletionEngine {
@@ -24,14 +21,16 @@ export class CompletionEngine {
 		this.settings = settings;
 	}
 
-	private getEndpoint(): string {
-		const { apiProvider, apiEndpoint } = this.settings;
+	private getConfig() {
+		return this.settings.providerConfigs[this.settings.apiProvider];
+	}
 
+	private getEndpoint(): string {
+		const { apiEndpoint } = this.getConfig();
 		if (apiEndpoint) {
 			return apiEndpoint.replace(/\/$/, ""); // 移除末尾斜杠
 		}
-
-		switch (apiProvider) {
+		switch (this.settings.apiProvider) {
 			case "openai":
 				return "https://api.openai.com/v1";
 			case "ollama":
@@ -77,7 +76,7 @@ export class CompletionEngine {
 			return [];
 		}
 
-		if (!this.settings.apiKey && this.settings.apiProvider !== "ollama") {
+		if (!this.getConfig().apiKey && this.settings.apiProvider !== "ollama") {
 			console.error("[Copilot] No API key configured");
 			new Notice("请配置 API Key");
 			return [];
@@ -90,10 +89,10 @@ export class CompletionEngine {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				"Authorization": `Bearer ${this.settings.apiKey}`,
+				"Authorization": `Bearer ${this.getConfig().apiKey}`,
 			},
 			body: JSON.stringify({
-				model: this.settings.modelName,
+				model: this.getConfig().modelName,
 				messages: [
 					{
 						role: "system",

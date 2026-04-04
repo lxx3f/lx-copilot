@@ -4,13 +4,22 @@ import CopilotPlugin from "./main";
 export type ApiProvider = "openai" | "azure" | "ollama" | "kimi" | "deepseek" | "custom";
 export type CompletionMode = "single-line" | "multi-line";
 
+export interface ProviderConfig {
+	apiKey: string;
+	apiEndpoint: string;
+	modelName: string;
+}
+
 export interface CopilotSettings {
 	enabled: boolean;
 	apiProvider: ApiProvider;
 	completionMode: CompletionMode;
-	apiKey: string;
-	apiEndpoint: string;
-	modelName: string;
+	// 每个提供商独立配置
+	providerConfigs: Record<ApiProvider, ProviderConfig>;
+	// 兼容旧配置（迁移后不再使用）
+	apiKey?: string;
+	apiEndpoint?: string;
+	modelName?: string;
 	debounceDelay: number;
 	minTriggerLength: number;
 	maxCompletionLength: number;
@@ -45,19 +54,69 @@ export const PROVIDER_DEFAULTS: Record<
 	},
 };
 
+export function createDefaultProviderConfigs(): Record<ApiProvider, ProviderConfig> {
+	return {
+		openai: {
+			apiKey: "",
+			apiEndpoint: PROVIDER_DEFAULTS.openai.endpoint,
+			modelName: PROVIDER_DEFAULTS.openai.model,
+		},
+		azure: {
+			apiKey: "",
+			apiEndpoint: PROVIDER_DEFAULTS.azure.endpoint,
+			modelName: PROVIDER_DEFAULTS.azure.model,
+		},
+		ollama: {
+			apiKey: "",
+			apiEndpoint: PROVIDER_DEFAULTS.ollama.endpoint,
+			modelName: PROVIDER_DEFAULTS.ollama.model,
+		},
+		kimi: {
+			apiKey: "",
+			apiEndpoint: PROVIDER_DEFAULTS.kimi.endpoint,
+			modelName: PROVIDER_DEFAULTS.kimi.model,
+		},
+		deepseek: {
+			apiKey: "",
+			apiEndpoint: PROVIDER_DEFAULTS.deepseek.endpoint,
+			modelName: PROVIDER_DEFAULTS.deepseek.model,
+		},
+		custom: {
+			apiKey: "",
+			apiEndpoint: "",
+			modelName: "",
+		},
+	};
+}
+
 export const DEFAULT_SETTINGS: CopilotSettings = {
 	enabled: true,
 	apiProvider: "openai",
 	completionMode: "single-line",
-	apiKey: "",
-	apiEndpoint: "",
-	modelName: "gpt-3.5-turbo",
+	providerConfigs: createDefaultProviderConfigs(),
 	debounceDelay: 500,
 	minTriggerLength: 3,
 	maxCompletionLength: 100,
 	completionCount: 2,
 	temperature: 0.7,
 };
+
+/** 将旧版单配置迁移到新版按提供商配置 */
+export function migrateSettings(settings: Partial<CopilotSettings>): CopilotSettings {
+	const migrated = Object.assign({}, DEFAULT_SETTINGS, settings);
+	if (!migrated.providerConfigs) {
+		migrated.providerConfigs = createDefaultProviderConfigs();
+	}
+	// 若存在旧配置，把它放进当前选中的提供商配置里
+	if (settings.apiKey !== undefined || settings.apiEndpoint !== undefined || settings.modelName !== undefined) {
+		migrated.providerConfigs[migrated.apiProvider] = {
+			apiKey: settings.apiKey ?? migrated.providerConfigs[migrated.apiProvider].apiKey,
+			apiEndpoint: settings.apiEndpoint ?? migrated.providerConfigs[migrated.apiProvider].apiEndpoint,
+			modelName: settings.modelName ?? migrated.providerConfigs[migrated.apiProvider].modelName,
+		};
+	}
+	return migrated;
+}
 
 export class CopilotSettingTab extends PluginSettingTab {
 	plugin: CopilotPlugin;
@@ -87,10 +146,13 @@ export class CopilotSettingTab extends PluginSettingTab {
 					})
 			);
 
+		const currentProvider = this.plugin.settings.apiProvider;
+		const config = this.plugin.settings.providerConfigs[currentProvider];
+
 		// API 提供商选择
 		new Setting(containerEl)
 			.setName("API 提供商")
-			.setDesc("选择 AI 服务提供商")
+			.setDesc("选择 AI 服务提供商，每个提供商可保存独立配置")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("openai", "OpenAI")
@@ -99,16 +161,21 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.addOption("kimi", "Kimi (月之暗面)")
 					.addOption("deepseek", "DeepSeek")
 					.addOption("custom", "自定义 API")
-					.setValue(this.plugin.settings.apiProvider)
+					.setValue(currentProvider)
 					.onChange(async (value) => {
 						const newProvider = value as ApiProvider;
 						this.plugin.settings.apiProvider = newProvider;
 
-						// 自动填充默认端点和模型
+						// 自动填充默认端点和模型（仅当新选定提供商的配置为空时）
 						if (newProvider !== "custom") {
 							const defaults = PROVIDER_DEFAULTS[newProvider];
-							this.plugin.settings.apiEndpoint = defaults.endpoint;
-							this.plugin.settings.modelName = defaults.model;
+							const newConfig = this.plugin.settings.providerConfigs[newProvider];
+							if (!newConfig.apiEndpoint) {
+								newConfig.apiEndpoint = defaults.endpoint;
+							}
+							if (!newConfig.modelName) {
+								newConfig.modelName = defaults.model;
+							}
 						}
 
 						await this.plugin.saveSettings();
@@ -118,16 +185,16 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		// API Key（仅非本地模型需要）
 		const noKeyProviders: ApiProvider[] = ["ollama"];
-		if (!noKeyProviders.includes(this.plugin.settings.apiProvider)) {
+		if (!noKeyProviders.includes(currentProvider)) {
 			new Setting(containerEl)
 				.setName("API Key")
 				.setDesc("你的 API 密钥（不会离开本设备）")
 				.addText((text) =>
 					text
 						.setPlaceholder("sk-...")
-						.setValue(this.plugin.settings.apiKey)
+						.setValue(config.apiKey)
 						.onChange(async (value) => {
-							this.plugin.settings.apiKey = value;
+							config.apiKey = value;
 							await this.plugin.saveSettings();
 						})
 				);
@@ -143,27 +210,27 @@ export class CopilotSettingTab extends PluginSettingTab {
 			custom: "自定义 API",
 		};
 
-		const providerName = providerNames[this.plugin.settings.apiProvider];
+		const providerName = providerNames[currentProvider];
 		const defaultEndpoint =
-			this.plugin.settings.apiProvider === "custom"
+			currentProvider === "custom"
 				? "https://api.example.com/v1"
-				: PROVIDER_DEFAULTS[this.plugin.settings.apiProvider]?.endpoint || "";
+				: PROVIDER_DEFAULTS[currentProvider]?.endpoint || "";
 
 		new Setting(containerEl)
 			.setName("API 端点")
 			.setDesc(
-				this.plugin.settings.apiProvider === "ollama"
+				currentProvider === "ollama"
 					? "Ollama 服务地址，例如: http://localhost:11434"
-					: this.plugin.settings.apiProvider === "custom"
+					: currentProvider === "custom"
 						? "自定义 API 的完整端点 URL"
 						: `${providerName} 的 API 端点（已预填默认值，通常无需修改）`
 			)
 			.addText((text) =>
 				text
 					.setPlaceholder(defaultEndpoint)
-					.setValue(this.plugin.settings.apiEndpoint)
+					.setValue(config.apiEndpoint)
 					.onChange(async (value) => {
-						this.plugin.settings.apiEndpoint = value;
+						config.apiEndpoint = value;
 						await this.plugin.saveSettings();
 					})
 			);
@@ -181,18 +248,18 @@ export class CopilotSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("模型名称")
 			.setDesc(
-				this.plugin.settings.apiProvider === "kimi"
+				currentProvider === "kimi"
 					? "Kimi 模型：8k/32k/128k 表示上下文长度"
-					: this.plugin.settings.apiProvider === "deepseek"
+					: currentProvider === "deepseek"
 						? "deepseek-chat（通用）或 deepseek-coder（代码专用）"
 						: "使用的 AI 模型"
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder(modelPlaceholders[this.plugin.settings.apiProvider])
-					.setValue(this.plugin.settings.modelName)
+					.setPlaceholder(modelPlaceholders[currentProvider])
+					.setValue(config.modelName)
 					.onChange(async (value) => {
-						this.plugin.settings.modelName = value;
+						config.modelName = value;
 						await this.plugin.saveSettings();
 					})
 			);

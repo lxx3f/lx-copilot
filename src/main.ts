@@ -1,6 +1,6 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFile } from "obsidian";
+import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
 import { Compartment } from "@codemirror/state";
-import { CopilotSettingTab, DEFAULT_SETTINGS, CopilotSettings } from "./settings";
+import { CopilotSettingTab, DEFAULT_SETTINGS, migrateSettings, CopilotSettings } from "./settings";
 import { CompletionEngine } from "./completion";
 import { SummaryEngine } from "./summary";
 import { SummaryModal } from "./ui/summary-modal";
@@ -169,7 +169,7 @@ export default class CopilotPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = migrateSettings((await this.loadData()) ?? {});
 	}
 
 	async saveSettings() {
@@ -221,13 +221,8 @@ export default class CopilotPlugin extends Plugin {
 		cursor: { line: number; ch: number },
 		beforeCursor: string
 	): boolean {
-		// 检查是否在代码块中
-		if (beforeCursor.includes("```") || beforeCursor.includes("`")) {
-			return true;
-		}
-
-		// 检查是否在数学公式中
-		if (beforeCursor.includes("$") || beforeCursor.includes("$$")) {
+		// 检查是否在代码块或数学公式中
+		if (beforeCursor.includes("`") || beforeCursor.includes("$")) {
 			return true;
 		}
 

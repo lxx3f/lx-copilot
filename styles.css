@@ -21,6 +21,43 @@
 	z-index: 9999;
 }
 
+/* Summary Modal 样式 */
+.copilot-summary-box,
+.copilot-suggestion-box {
+	margin-bottom: 16px;
+}
+
+.copilot-summary-box h3,
+.copilot-suggestion-box h3 {
+	margin-bottom: 8px;
+	font-size: var(--font-ui-medium);
+}
+
+.copilot-summary-box p {
+	background-color: var(--background-primary-alt);
+	padding: 12px;
+	border-radius: 6px;
+	line-height: 1.6;
+	margin: 0;
+}
+
+.copilot-suggestion-box ul {
+	padding-left: 20px;
+	margin: 0;
+}
+
+.copilot-suggestion-box li {
+	margin-bottom: 6px;
+	line-height: 1.5;
+}
+
+.copilot-summary-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 20px;
+}
+
 /* 设置面板样式 */
 .setting-item[data-id="apiKey"] input {
 	-webkit-text-security: disc;
