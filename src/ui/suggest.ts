@@ -1,54 +1,117 @@
-import { Editor, EditorPosition } from "obsidian";
+import { Editor } from "obsidian";
+import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
+import { Compartment } from "@codemirror/state";
 
-// CodeMirror 编辑器接口
-interface CodeMirrorEditor {
-	containerEl?: HTMLElement;
-	coordsAtPos?(pos: number): { left: number; top: number } | null;
-	cm?: {
-		coordsAtPos(pos: EditorPosition): { left: number; top: number } | null;
-	};
+interface CopilotEditor {
+	cm?: EditorView;
+}
+
+class GhostTextWidget extends WidgetType {
+	constructor(private text: string) {
+		super();
+	}
+
+	toDOM(): HTMLElement {
+		const span = document.createElement("span");
+		span.className = "copilot-ghost-text";
+		span.textContent = this.text;
+		span.setAttribute("aria-hidden", "true");
+		return span;
+	}
+
+	eq(other: GhostTextWidget): boolean {
+		return this.text === other.text;
+	}
+}
+
+function createGhostTextPlugin(text: string) {
+	return ViewPlugin.fromClass(
+		class {
+			decorations: DecorationSet;
+			constructor(view: EditorView) {
+				this.decorations = this.buildDecorations(view);
+			}
+			update(update: ViewUpdate) {
+				if (update.docChanged || update.selectionSet) {
+					this.decorations = this.buildDecorations(update.view);
+				}
+			}
+			buildDecorations(view: EditorView): DecorationSet {
+				const head = view.state.selection.main.head;
+				const deco = Decoration.widget({
+					widget: new GhostTextWidget(text),
+					side: 1,
+				});
+				return Decoration.set([deco.range(head)]);
+			}
+		},
+		{
+			decorations: (v) => v.decorations,
+		}
+	);
 }
 
 export class SuggestWidget {
-	private editor: Editor;
-	private element: HTMLElement | null = null;
-	private suggestion: string = "";
-	private onAccept: (() => void) | null = null;
+	private candidates: string[] = [];
+	private currentIndex: number = 0;
+	private onAccept: ((text: string) => void) | null = null;
 	private visible: boolean = false;
+	private hintEl: HTMLElement | null = null;
 
-	constructor(editor: Editor) {
-		this.editor = editor;
-	}
+	constructor(private editor: Editor, private compartment: Compartment) {}
 
-	show(suggestion: string, onAccept: () => void) {
-		this.suggestion = suggestion;
-		this.onAccept = onAccept;
-
-		// 隐藏之前的建议
+	show(candidates: string[], onAccept: (text: string) => void) {
 		this.hide();
-
-		// 创建建议元素
-		this.createElement();
-
-		// 定位到光标位置
-		this.positionElement();
-
+		if (!candidates.length) return;
+		this.candidates = candidates;
+		this.currentIndex = 0;
+		this.onAccept = onAccept;
 		this.visible = true;
+
+		const view = this.getEditorView();
+		if (!view) {
+			console.error("[Copilot] Cannot get EditorView");
+			this.visible = false;
+			return;
+		}
+
+		this.render(view);
 	}
 
 	hide() {
-		if (this.element) {
-			this.element.remove();
-			this.element = null;
+		const view = this.getEditorView();
+		if (view) {
+			view.dispatch({ effects: this.compartment.reconfigure([]) });
+		}
+		if (this.hintEl) {
+			this.hintEl.remove();
+			this.hintEl = null;
 		}
 		this.visible = false;
+		this.candidates = [];
+		this.currentIndex = 0;
 	}
 
 	accept() {
+		if (!this.visible || !this.candidates.length) return;
+		const suggestion = this.candidates[this.currentIndex];
 		if (this.onAccept) {
-			this.onAccept();
+			this.onAccept(suggestion);
 		}
 		this.hide();
+	}
+
+	next() {
+		if (!this.visible || this.candidates.length <= 1) return;
+		this.currentIndex = (this.currentIndex + 1) % this.candidates.length;
+		this.refresh();
+	}
+
+	prev() {
+		if (!this.visible || this.candidates.length <= 1) return;
+		this.currentIndex = (this.currentIndex - 1 + this.candidates.length) % this.candidates.length;
+		this.refresh();
 	}
 
 	isVisible(): boolean {
@@ -59,75 +122,54 @@ export class SuggestWidget {
 		this.hide();
 	}
 
-	private createElement() {
-		// 查找编辑器容器
-		const editorEl = this.getEditorElement();
-		if (!editorEl) return;
-
-		this.element = document.createElement("div");
-		this.element.className = "copilot-suggestion";
-		this.element.innerHTML = `
-			<span class="copilot-suggestion-text">${this.escapeHtml(
-				this.suggestion
-			)}</span>
-			<span class="copilot-suggestion-hint">Tab 接受</span>
-		`;
-
-		editorEl.appendChild(this.element);
+	private refresh() {
+		const view = this.getEditorView();
+		if (!view) return;
+		this.render(view);
 	}
 
-	private getEditorElement(): HTMLElement | null {
-		// 尝试获取 CodeMirror 容器
-		const cmEditor = this.editor as unknown as CodeMirrorEditor;
+	private render(view: EditorView) {
+		const suggestion = this.candidates[this.currentIndex];
+		const plugin = createGhostTextPlugin(suggestion);
+		view.dispatch({ effects: this.compartment.reconfigure(plugin) });
+		this.showHint(view);
+	}
 
-		if (cmEditor.containerEl) {
-			return cmEditor.containerEl;
+	private getEditorView(): EditorView | null {
+		const cm = (this.editor as unknown as CopilotEditor).cm;
+		return cm || null;
+	}
+
+	private showHint(view: EditorView) {
+		if (this.hintEl) {
+			this.hintEl.remove();
+			this.hintEl = null;
 		}
 
-		// 备选方案：通过 DOM 查找
-		const activeLeaf = document.querySelector(".workspace-leaf.mod-active");
-		if (activeLeaf) {
-			return activeLeaf.querySelector(".cm-editor") as HTMLElement ||
-				   activeLeaf.querySelector(".markdown-source-view") as HTMLElement ||
-				   activeLeaf.querySelector(".view-content") as HTMLElement;
-		}
+		const head = view.state.selection.main.head;
+		const coords = view.coordsAtPos(head);
+		if (!coords) return;
 
-		return null;
-	}
+		const total = this.candidates.length;
+		const index = this.currentIndex + 1;
+		const hasMultiple = total > 1;
+		const hintText = hasMultiple
+			? `${index}/${total} Tab 接受 · Alt+] 下一个 · Alt+[ 上一个 · Esc 关闭`
+			: "Tab 接受 · Esc 关闭";
 
-	private positionElement() {
-		if (!this.element) return;
+		const hint = document.createElement("div");
+		hint.className = "copilot-ghost-hint";
+		hint.textContent = hintText;
+		document.body.appendChild(hint);
 
-		// 获取光标位置
-		const cursor = this.editor.getCursor();
-		const line = cursor.line;
-		const ch = cursor.ch;
+		const rect = hint.getBoundingClientRect();
+		const top = coords.top - rect.height - 4;
+		const left = coords.left;
+		hint.style.position = "fixed";
+		hint.style.top = `${top}px`;
+		hint.style.left = `${left}px`;
+		hint.style.zIndex = "9999";
 
-		// 使用行元素定位
-		const editorEl = this.getEditorElement();
-		if (!editorEl) return;
-
-		const lineElements = editorEl.querySelectorAll(".cm-line");
-		if (lineElements.length <= line) return;
-
-		const lineEl = lineElements[line] as HTMLElement;
-		const lineRect = lineEl.getBoundingClientRect();
-		const editorRect = editorEl.getBoundingClientRect();
-
-		// 估算字符宽度并计算位置
-		const charWidth = 8; // 近似字符宽度
-		const left = ch * charWidth;
-		const top = lineRect.height + 4; // 行下方
-
-		this.element.style.position = "absolute";
-		this.element.style.left = `${left}px`;
-		this.element.style.top = `${top}px`;
-		this.element.style.zIndex = "1000";
-	}
-
-	private escapeHtml(text: string): string {
-		const div = document.createElement("div");
-		div.textContent = text;
-		return div.innerHTML;
+		this.hintEl = hint;
 	}
 }

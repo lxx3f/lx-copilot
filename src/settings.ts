@@ -2,16 +2,19 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import CopilotPlugin from "./main";
 
 export type ApiProvider = "openai" | "azure" | "ollama" | "kimi" | "deepseek" | "custom";
+export type CompletionMode = "single-line" | "multi-line";
 
 export interface CopilotSettings {
 	enabled: boolean;
 	apiProvider: ApiProvider;
+	completionMode: CompletionMode;
 	apiKey: string;
 	apiEndpoint: string;
 	modelName: string;
 	debounceDelay: number;
 	minTriggerLength: number;
 	maxCompletionLength: number;
+	completionCount: number;
 	temperature: number;
 }
 
@@ -45,12 +48,14 @@ export const PROVIDER_DEFAULTS: Record<
 export const DEFAULT_SETTINGS: CopilotSettings = {
 	enabled: true,
 	apiProvider: "openai",
+	completionMode: "single-line",
 	apiKey: "",
 	apiEndpoint: "",
 	modelName: "gpt-3.5-turbo",
 	debounceDelay: 500,
 	minTriggerLength: 3,
 	maxCompletionLength: 100,
+	completionCount: 2,
 	temperature: 0.7,
 };
 
@@ -194,6 +199,21 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: "补全行为" });
 
+		// 补全模式
+		new Setting(containerEl)
+			.setName("补全模式")
+			.setDesc("single-line: 补全当前行; multi-line: 根据上下文自动补全多行内容")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("single-line", "单行补全")
+					.addOption("multi-line", "多行补全")
+					.setValue(this.plugin.settings.completionMode)
+					.onChange(async (value) => {
+						this.plugin.settings.completionMode = value as CompletionMode;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		// 防抖延迟
 		new Setting(containerEl)
 			.setName("触发延迟 (ms)")
@@ -235,6 +255,21 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.maxCompletionLength = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// 候选数量
+		new Setting(containerEl)
+			.setName("候选数量")
+			.setDesc("每次请求生成的补全备选方案数量（需 API 支持）")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 5, 1)
+					.setValue(this.plugin.settings.completionCount)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.completionCount = value;
 						await this.plugin.saveSettings();
 					})
 			);

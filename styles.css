@@ -1,51 +1,24 @@
-/* Obsidian Copilot 插件样式 */
-
-.copilot-suggestion {
-	background-color: var(--background-primary-alt);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 6px;
-	padding: 8px 12px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	font-family: var(--font-interface);
-	font-size: var(--font-ui-small);
-	max-width: 400px;
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	animation: copilot-fade-in 0.15s ease-out;
-}
-
-.copilot-suggestion-text {
-	color: var(--text-muted);
-	white-space: pre;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.copilot-suggestion-hint {
-	color: var(--text-faint);
-	font-size: var(--font-ui-smaller);
-	white-space: nowrap;
-	padding: 2px 6px;
-	background-color: var(--background-secondary);
-	border-radius: 4px;
-}
-
-@keyframes copilot-fade-in {
-	from {
-		opacity: 0;
-		transform: translateY(-4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-/* 幽灵文本样式（替代方案） */
-.cm-line .copilot-ghost-text {
+/* 幽灵文本内联显示 */
+.copilot-ghost-text {
 	color: var(--text-faint);
 	pointer-events: none;
+	user-select: none;
+	opacity: 0.8;
+}
+
+/* 浮动操作提示 */
+.copilot-ghost-hint {
+	position: fixed;
+	background-color: var(--background-primary-alt);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	padding: 2px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+	white-space: nowrap;
+	pointer-events: none;
+	z-index: 9999;
 }
 
 /* 设置面板样式 */

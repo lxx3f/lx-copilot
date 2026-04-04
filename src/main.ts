@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFile } from "obsidian";
+import { Compartment } from "@codemirror/state";
 import { CopilotSettingTab, DEFAULT_SETTINGS, CopilotSettings } from "./settings";
 import { CompletionEngine } from "./completion";
 import { SuggestWidget } from "./ui/suggest";
@@ -8,6 +9,7 @@ export default class CopilotPlugin extends Plugin {
 	completionEngine: CompletionEngine;
 	suggestWidget: SuggestWidget | null = null;
 	private debounceTimer: number | null = null;
+	copilotCompartment = new Compartment();
 
 	async onload() {
 		console.log("[Copilot] Plugin loading...");
@@ -16,6 +18,9 @@ export default class CopilotPlugin extends Plugin {
 
 		this.completionEngine = new CompletionEngine(this.settings);
 		console.log("[Copilot] Completion engine initialized");
+
+		// 注册 CodeMirror compartment 用于幽灵文本
+		this.registerEditorExtension(this.copilotCompartment.of([]));
 
 		// 添加设置面板
 		this.addSettingTab(new CopilotSettingTab(this.app, this));
@@ -36,6 +41,34 @@ export default class CopilotPlugin extends Plugin {
 			editorCallback: (editor: Editor) => {
 				if (this.suggestWidget && this.suggestWidget.isVisible()) {
 					this.suggestWidget.accept();
+					return true;
+				}
+				return false;
+			},
+		});
+
+		// 注册下一个候选的命令
+		this.addCommand({
+			id: "next-completion",
+			name: "下一个补全建议",
+			hotkeys: [{ modifiers: ["Alt"], key: "]" }],
+			editorCallback: (editor: Editor) => {
+				if (this.suggestWidget && this.suggestWidget.isVisible()) {
+					this.suggestWidget.next();
+					return true;
+				}
+				return false;
+			},
+		});
+
+		// 注册上一个候选的命令
+		this.addCommand({
+			id: "prev-completion",
+			name: "上一个补全建议",
+			hotkeys: [{ modifiers: ["Alt"], key: "[" }],
+			editorCallback: (editor: Editor) => {
+				if (this.suggestWidget && this.suggestWidget.isVisible()) {
+					this.suggestWidget.prev();
 					return true;
 				}
 				return false;
@@ -99,7 +132,7 @@ export default class CopilotPlugin extends Plugin {
 		console.log("[Copilot] Before cursor:", beforeCursor);
 
 		// 检查是否应该触发补全
-		const shouldTrigger = this.shouldTriggerCompletion(beforeCursor);
+		const shouldTrigger = this.shouldTriggerCompletion(editor, cursor, beforeCursor);
 		console.log("[Copilot] Should trigger:", shouldTrigger);
 		if (!shouldTrigger) {
 			if (this.suggestWidget) {
@@ -115,7 +148,11 @@ export default class CopilotPlugin extends Plugin {
 		}, this.settings.debounceDelay);
 	}
 
-	private shouldTriggerCompletion(beforeCursor: string): boolean {
+	private shouldTriggerCompletion(
+		editor: Editor,
+		cursor: { line: number; ch: number },
+		beforeCursor: string
+	): boolean {
 		// 检查是否在代码块中
 		if (beforeCursor.includes("```") || beforeCursor.includes("`")) {
 			return true;
@@ -133,11 +170,20 @@ export default class CopilotPlugin extends Plugin {
 		}
 
 		// 检查最小长度
-		if (beforeCursor.trim().length < this.settings.minTriggerLength) {
-			return false;
+		if (beforeCursor.trim().length >= this.settings.minTriggerLength) {
+			return true;
 		}
 
-		return true;
+		// 多行模式：即使当前行输入很短，只要上下文有足够内容也触发
+		if (this.settings.completionMode === "multi-line") {
+			const context = this.buildContext(editor, cursor);
+			// 上下文包含当前行，所以只要上下文有效长度超过阈值即可
+			if (context.trim().length >= this.settings.minTriggerLength * 2) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private async requestCompletion(
@@ -149,17 +195,17 @@ export default class CopilotPlugin extends Plugin {
 		try {
 			const context = this.buildContext(editor, cursor);
 			console.log("[Copilot] Context length:", context.length);
-			const completion = await this.completionEngine.getCompletion(
+			const completions = await this.completionEngine.getCompletions(
 				context,
 				beforeCursor
 			);
-			console.log("[Copilot] Got completion:", completion);
+			console.log("[Copilot] Got completions:", completions.length);
 
-			if (completion && completion.trim()) {
-				console.log("[Copilot] Showing suggestion");
-				this.showSuggestion(editor, cursor, completion);
+			if (completions.length > 0) {
+				console.log("[Copilot] Showing suggestions");
+				this.showSuggestion(editor, cursor, completions);
 			} else {
-				console.log("[Copilot] Empty completion, not showing");
+				console.log("[Copilot] Empty completions, not showing");
 			}
 		} catch (error) {
 			console.error("[Copilot] Completion error:", error);
@@ -172,7 +218,7 @@ export default class CopilotPlugin extends Plugin {
 	): string {
 		// 获取前后文内容
 		const lines = editor.getValue().split("\n");
-		const contextLines = 10; // 前后各取10行
+		const contextLines = this.settings.completionMode === "multi-line" ? 30 : 10;
 
 		const startLine = Math.max(0, cursor.line - contextLines);
 		const endLine = Math.min(lines.length, cursor.line + contextLines);
@@ -183,16 +229,24 @@ export default class CopilotPlugin extends Plugin {
 	private showSuggestion(
 		editor: Editor,
 		cursor: { line: number; ch: number },
-		suggestion: string
+		candidates: string[]
 	) {
 		if (!this.suggestWidget) {
-			this.suggestWidget = new SuggestWidget(editor);
+			this.suggestWidget = new SuggestWidget(editor, this.copilotCompartment);
 		}
 
-		this.suggestWidget.show(suggestion, () => {
+		this.suggestWidget.show(candidates, (suggestion: string) => {
 			// 接受建议后的回调
 			const currentCursor = editor.getCursor();
 			editor.replaceRange(suggestion, currentCursor);
+
+			// 将光标移动到插入文本的末尾
+			const insertedLines = suggestion.split("\n");
+			const newLine = currentCursor.line + insertedLines.length - 1;
+			const newCh = insertedLines.length === 1
+				? currentCursor.ch + suggestion.length
+				: insertedLines[insertedLines.length - 1].length;
+			editor.setCursor(newLine, newCh);
 		});
 	}
 }
