@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-copilot-plugin",
+  "name": "lx-copilot",
   "version": "0.1.0",
   "description": "Obsidian plugin providing Copilot-like auto-completion for markdown notes",
   "main": "main.js",

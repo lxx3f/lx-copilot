@@ -1,4 +1,4 @@
-# Obsidian Copilot
+# lx-copilot
 
 为 Obsidian 提供类似 Copilot 的 AI 自动补全功能，特别优化了 Markdown 笔记、代码块和数学公式的补全体验。
 
@@ -15,7 +15,7 @@
 ### 手动安装
 
 1. 下载最新版本的发布包
-2. 解压到 `<vault>/.obsidian/plugins/obsidian-copilot/`
+2. 解压到 `<vault>/.obsidian/plugins/lx-copilot/`
 3. 重启 Obsidian
 4. 在设置中启用插件并配置 API 密钥
 
@@ -23,7 +23,7 @@
 
 ```bash
 git clone <repo-url>
-cd obsidian-copilot
+cd lx-copilot
 npm install
 npm run dev
 ```
@@ -31,15 +31,15 @@ npm run dev
 将项目链接到你的测试仓库：
 ```bash
 # Windows (PowerShell)
-New-Item -ItemType SymbolicLink -Path "<vault>/.obsidian/plugins/obsidian-copilot" -Target "<project-path>"
+New-Item -ItemType SymbolicLink -Path "<vault>/.obsidian/plugins/lx-copilot" -Target "<project-path>"
 
 # macOS/Linux
-ln -s <project-path> <vault>/.obsidian/plugins/obsidian-copilot
+ln -s <project-path> <vault>/.obsidian/plugins/lx-copilot
 ```
 
 ## 配置
 
-在 Obsidian 设置中找到 "Obsidian Copilot"：
+在 Obsidian 设置中找到 "lx-copilot"：
 
 ### 支持的 API 提供商
 

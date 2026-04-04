@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const root = join(__dirname, "..");
 
-const vaultPluginDir = "C:\\Users\\lx\\Documents\\sandbox\\.obsidian\\plugins\\obsidian-copilot";
+const vaultPluginDir = "C:\\Users\\lx\\Documents\\sandbox\\.obsidian\\plugins\\lx-copilot";
 const filesToCopy = ["main.js", "manifest.json", "styles.css"];
 
 // 确保目标目录存在
