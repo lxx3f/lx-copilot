@@ -209,8 +209,8 @@ export default class CopilotPlugin extends Plugin {
 		}
 
 		// 防抖处理
-		this.debounceTimer = window.setTimeout(async () => {
-			await this.requestCompletion(editor, cursor, beforeCursor);
+		this.debounceTimer = window.setTimeout(() => {
+			void this.requestCompletion(editor, cursor, beforeCursor);
 		}, this.settings.debounceDelay);
 	}
 

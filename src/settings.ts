@@ -131,42 +131,42 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setName("Obsidian Copilot 设置").setHeading();
+		new Setting(containerEl).setName("lx-copilot settings").setHeading();
 
-		// 启用/禁用插件
+		// Enable/disable
 		new Setting(containerEl)
-			.setName("启用补全")
-			.setDesc("开启 AI 自动补全功能")
+			.setName("Enable completion")
+			.setDesc("Enable AI auto-completion")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enabled)
 					.onChange((value) => {
 						this.plugin.settings.enabled = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
 		const currentProvider = this.plugin.settings.apiProvider;
 		const config = this.plugin.settings.providerConfigs[currentProvider];
 
-		// API 提供商选择
+		// Provider selection
 		new Setting(containerEl)
-			.setName("API 提供商")
-			.setDesc("选择 AI 服务提供商，每个提供商可保存独立配置")
+			.setName("API provider")
+			.setDesc("Select an AI provider; each provider stores its own configuration")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("openai", "OpenAI")
 					.addOption("azure", "Azure OpenAI")
-					.addOption("ollama", "Ollama (本地)")
-					.addOption("kimi", "Kimi (月之暗面)")
+					.addOption("ollama", "Ollama (local)")
+					.addOption("kimi", "Kimi")
 					.addOption("deepseek", "DeepSeek")
-					.addOption("custom", "自定义 API")
+					.addOption("custom", "Custom API")
 					.setValue(currentProvider)
 					.onChange((value) => {
 						const newProvider = value as ApiProvider;
 						this.plugin.settings.apiProvider = newProvider;
 
-						// 自动填充默认端点和模型（仅当新选定提供商的配置为空时）
+						// Auto-fill defaults only when the chosen provider config is empty
 						if (newProvider !== "custom") {
 							const defaults = PROVIDER_DEFAULTS[newProvider];
 							const newConfig = this.plugin.settings.providerConfigs[newProvider];
@@ -178,36 +178,36 @@ export class CopilotSettingTab extends PluginSettingTab {
 							}
 						}
 
-						this.plugin.saveSettings();
-						this.display(); // 重新渲染以显示/隐藏相关设置
+						void this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
-		// API key（仅非本地模型需要）
+		// API key (not needed for local models)
 		const noKeyProviders: ApiProvider[] = ["ollama"];
 		if (!noKeyProviders.includes(currentProvider)) {
 			new Setting(containerEl)
 				.setName("API key")
-				.setDesc("你的 API 密钥（不会离开本设备）")
+				.setDesc("Your API key is stored locally only")
 				.addText((text) =>
 					text
 						.setPlaceholder("sk-...")
 						.setValue(config.apiKey)
 						.onChange((value) => {
 							config.apiKey = value;
-							this.plugin.saveSettings();
+							void this.plugin.saveSettings();
 						})
 				);
 		}
 
-		// API Endpoint
+		// API endpoint
 		const providerNames: Record<ApiProvider, string> = {
 			openai: "OpenAI",
 			azure: "Azure",
 			ollama: "Ollama",
 			kimi: "Kimi",
 			deepseek: "DeepSeek",
-			custom: "自定义 API",
+			custom: "Custom API",
 		};
 
 		const providerName = providerNames[currentProvider];
@@ -217,13 +217,13 @@ export class CopilotSettingTab extends PluginSettingTab {
 				: PROVIDER_DEFAULTS[currentProvider]?.endpoint || "";
 
 		new Setting(containerEl)
-			.setName("API 端点")
+			.setName("API endpoint")
 			.setDesc(
 				currentProvider === "ollama"
-					? "Ollama 服务地址，例如: http://localhost:11434"
+					? "Ollama service address, e.g. http://localhost:11434"
 					: currentProvider === "custom"
-						? "自定义 API 的完整端点 URL"
-						: `${providerName} 的 API 端点（已预填默认值，通常无需修改）`
+						? "Full endpoint URL for the custom API"
+						: `${providerName} API endpoint (pre-filled with a default, usually no change needed)`
 			)
 			.addText((text) =>
 				text
@@ -231,11 +231,11 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setValue(config.apiEndpoint)
 					.onChange((value) => {
 						config.apiEndpoint = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		// 模型名称
+		// Model name
 		const modelPlaceholders: Record<ApiProvider, string> = {
 			openai: "gpt-3.5-turbo",
 			azure: "gpt-35-turbo",
@@ -246,13 +246,13 @@ export class CopilotSettingTab extends PluginSettingTab {
 		};
 
 		new Setting(containerEl)
-			.setName("模型名称")
+			.setName("Model name")
 			.setDesc(
 				currentProvider === "kimi"
-					? "Kimi 模型：8k/32k/128k 表示上下文长度"
+					? "Kimi model: 8k/32k/128k indicates context length"
 					: currentProvider === "deepseek"
-						? "deepseek-chat（通用）或 deepseek-coder（代码专用）"
-						: "使用的 AI 模型"
+						? "deepseek-chat (general) or deepseek-coder (code-focused)"
+						: "AI model to use"
 			)
 			.addText((text) =>
 				text
@@ -260,31 +260,31 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setValue(config.modelName)
 					.onChange((value) => {
 						config.modelName = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		new Setting(containerEl).setName("补全行为").setHeading();
+		new Setting(containerEl).setName("Completion behavior").setHeading();
 
-		// 补全模式
+		// Completion mode
 		new Setting(containerEl)
-			.setName("补全模式")
-			.setDesc("single-line: 补全当前行; multi-line: 根据上下文自动补全多行内容")
+			.setName("Completion mode")
+			.setDesc("Single-line: complete the current line; multi-line: auto-complete multiple lines based on context")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("single-line", "单行补全")
-					.addOption("multi-line", "多行补全")
+					.addOption("single-line", "Single-line")
+					.addOption("multi-line", "Multi-line")
 					.setValue(this.plugin.settings.completionMode)
 					.onChange((value) => {
 						this.plugin.settings.completionMode = value as CompletionMode;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		// 防抖延迟
+		// Debounce delay
 		new Setting(containerEl)
-			.setName("触发延迟 (ms)")
-			.setDesc("输入停止后多久触发补全请求")
+			.setName("Trigger delay (ms)")
+			.setDesc("Delay before triggering a completion request after input stops")
 			.addSlider((slider) =>
 				slider
 					.setLimits(100, 2000, 100)
@@ -292,14 +292,14 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange((value) => {
 						this.plugin.settings.debounceDelay = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		// 最小触发长度
+		// Minimum trigger length
 		new Setting(containerEl)
-			.setName("最小触发长度")
-			.setDesc("输入多少字符后开始触发补全")
+			.setName("Minimum trigger length")
+			.setDesc("Number of characters to type before triggering completion")
 			.addSlider((slider) =>
 				slider
 					.setLimits(1, 20, 1)
@@ -307,14 +307,14 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange((value) => {
 						this.plugin.settings.minTriggerLength = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		// 最大补全长度
+		// Maximum completion length
 		new Setting(containerEl)
-			.setName("最大补全长度")
-			.setDesc("单次补全的最大字符数")
+			.setName("Maximum completion length")
+			.setDesc("Maximum number of characters per completion")
 			.addSlider((slider) =>
 				slider
 					.setLimits(10, 300, 10)
@@ -322,14 +322,14 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange((value) => {
 						this.plugin.settings.maxCompletionLength = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
-		// 候选数量
+		// Candidate count
 		new Setting(containerEl)
-			.setName("候选数量")
-			.setDesc("每次请求生成的补全备选方案数量（需 API 支持）")
+			.setName("Candidate count")
+			.setDesc("Number of completion alternatives generated per request (API support required)")
 			.addSlider((slider) =>
 				slider
 					.setLimits(1, 5, 1)
@@ -337,14 +337,14 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange((value) => {
 						this.plugin.settings.completionCount = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 
 		// Temperature
 		new Setting(containerEl)
 			.setName("Temperature")
-			.setDesc("创造性程度 (0=保守, 2=创造性)")
+			.setDesc("Creativity level (0 = conservative, 2 = creative)")
 			.addSlider((slider) =>
 				slider
 					.setLimits(0, 2, 0.1)
@@ -352,7 +352,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange((value) => {
 						this.plugin.settings.temperature = value;
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					})
 			);
 	}
