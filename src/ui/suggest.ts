@@ -25,7 +25,7 @@ class GhostTextWidget extends WidgetType {
 	}
 }
 
-function createGhostTextPlugin(text: string) {
+function createGhostTextPlugin(text: string, anchorPos: number) {
 	return ViewPlugin.fromClass(
 		class {
 			decorations: DecorationSet;
@@ -33,17 +33,17 @@ function createGhostTextPlugin(text: string) {
 				this.decorations = this.buildDecorations(view);
 			}
 			update(update: ViewUpdate) {
-				if (update.docChanged || update.selectionSet) {
+				// 只在文档内容变化时重建，避免跟随光标移动
+				if (update.docChanged) {
 					this.decorations = this.buildDecorations(update.view);
 				}
 			}
 			buildDecorations(view: EditorView): DecorationSet {
-				const head = view.state.selection.main.head;
 				const deco = Decoration.widget({
 					widget: new GhostTextWidget(text),
 					side: 1,
 				});
-				return Decoration.set([deco.range(head)]);
+				return Decoration.set([deco.range(anchorPos)]);
 			}
 		},
 		{
@@ -58,6 +58,7 @@ export class SuggestWidget {
 	private onAccept: ((text: string) => void) | null = null;
 	private visible: boolean = false;
 	private hintEl: HTMLElement | null = null;
+	private anchorPos: number = 0;
 
 	constructor(private editor: Editor, private compartment: Compartment) {}
 
@@ -76,6 +77,7 @@ export class SuggestWidget {
 			return;
 		}
 
+		this.anchorPos = view.state.selection.main.head;
 		this.render(view);
 	}
 
@@ -130,7 +132,7 @@ export class SuggestWidget {
 
 	private render(view: EditorView) {
 		const suggestion = this.candidates[this.currentIndex];
-		const plugin = createGhostTextPlugin(suggestion);
+		const plugin = createGhostTextPlugin(suggestion, this.anchorPos);
 		view.dispatch({ effects: this.compartment.reconfigure(plugin) });
 		this.showHint(view);
 	}

@@ -28,6 +28,13 @@ export default class CopilotPlugin extends Plugin {
 			})
 		);
 
+		// 光标/选择变化时隐藏建议（鼠标点击、方向键移动光标等）
+		this.registerDomEvent(document, "selectionchange", () => {
+			if (this.suggestWidget && this.suggestWidget.isVisible()) {
+				this.suggestWidget.hide();
+			}
+		});
+
 		// 切换标签页时隐藏建议
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
