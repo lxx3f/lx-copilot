@@ -9,7 +9,6 @@ export default class CopilotPlugin extends Plugin {
 	completionEngine: CompletionEngine;
 	suggestWidget: SuggestWidget | null = null;
 	private debounceTimer: number | null = null;
-	private isAcceptingSuggestion: boolean = false;
 	copilotCompartment = new Compartment();
 
 	async onload() {
@@ -72,7 +71,7 @@ export default class CopilotPlugin extends Plugin {
 			true
 		);
 
-		// 注册接受建议的命令（供用户自定义热键，默认不绑定 Tab）
+		// 注册接受建议的命令（供用户自定义热键，默认 Alt+Enter 在编辑器内生效）
 		this.addCommand({
 			id: "accept-completion",
 			name: "接受补全建议",
@@ -151,11 +150,6 @@ export default class CopilotPlugin extends Plugin {
 
 	private handleEditorChange(editor: Editor) {
 		if (!this.settings.enabled) {
-			return;
-		}
-
-		// 接受建议期间触发的 editor-change 不处理
-		if (this.isAcceptingSuggestion) {
 			return;
 		}
 

@@ -133,16 +133,16 @@ export class SuggestWidget {
 	private render(view: EditorView) {
 		const suggestion = this.candidates[this.currentIndex];
 		const plugin = createGhostTextPlugin(suggestion, this.anchorPos);
-		const tabKeymap = keymap.of([
+		const acceptKeymap = keymap.of([
 			{
-				key: "Tab",
+				key: "Alt-Enter",
 				run: () => {
 					this.accept();
 					return true;
 				},
 			},
 		]);
-		view.dispatch({ effects: this.compartment.reconfigure([plugin, tabKeymap]) });
+		view.dispatch({ effects: this.compartment.reconfigure([plugin, acceptKeymap]) });
 		this.showHint(view);
 	}
 
@@ -165,8 +165,8 @@ export class SuggestWidget {
 		const index = this.currentIndex + 1;
 		const hasMultiple = total > 1;
 		const hintText = hasMultiple
-			? `${index}/${total} Tab 接受 · Alt+] 下一个 · Alt+[ 上一个 · Esc 关闭`
-			: "Tab 接受 · Esc 关闭";
+			? `${index}/${total} Alt+Enter 接受 · Alt+] 下一个 · Alt+[ 上一个 · Esc 关闭`
+			: "Alt+Enter 接受 · Esc 关闭";
 
 		const hint = document.createElement("div");
 		hint.className = "copilot-ghost-hint";
