@@ -131,7 +131,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setName("lx-copilot settings").setHeading();
+		new Setting(containerEl).setName("General").setHeading();
 
 		// Enable/disable
 		new Setting(containerEl)
@@ -191,7 +191,7 @@ export class CopilotSettingTab extends PluginSettingTab {
 				.setDesc("Your API key is stored locally only")
 				.addText((text) =>
 					text
-						.setPlaceholder("sk-...")
+						.setPlaceholder("Your API key")
 						.setValue(config.apiKey)
 						.onChange((value) => {
 							config.apiKey = value;
