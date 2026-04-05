@@ -131,8 +131,6 @@ export class CopilotSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setName("General").setHeading();
-
 		// Enable/disable
 		new Setting(containerEl)
 			.setName("Enable completion")
@@ -155,11 +153,11 @@ export class CopilotSettingTab extends PluginSettingTab {
 			.setDesc("Select an AI provider; each provider stores its own configuration")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("openai", "OpenAI")
-					.addOption("azure", "Azure OpenAI")
+					.addOption("openai", "Openai")
+					.addOption("azure", "Azure openai")
 					.addOption("ollama", "Ollama (local)")
 					.addOption("kimi", "Kimi")
-					.addOption("deepseek", "DeepSeek")
+					.addOption("deepseek", "Deepseek")
 					.addOption("custom", "Custom API")
 					.setValue(currentProvider)
 					.onChange((value) => {
